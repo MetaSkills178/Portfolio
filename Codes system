@@ -1,0 +1,67 @@
+------------------------------------------------------- MODULE SCRIPT -----------------------------------------------------------------
+
+local Codes = {}
+
+Codes.Config = {
+	["Ryder_rix"] = {
+		Expire = 1709888400,
+		Reward = 1000
+	},
+	["Premium178"] = {
+		Expire = 9999999999999,
+		Reward = 100
+	}
+}
+
+function Codes.GetValidCode(testCode: string)
+	for code, props in Codes.Config do
+		if testCode:upper() == code:upper() then
+			return code
+		end
+	end
+end
+
+function Codes.IsCodeExpired(testCode: string)
+	local code = Codes.GetValidCode(testCode)
+	if not code then return end
+	local codeProps = Codes.Config[code]
+	local currentTime = os.time()
+	
+	return currentTime > codeProps.Expire
+end
+
+
+return Codes
+
+------------------------------------------------------- SERVER SCRIPT -----------------------------------------------------------------
+
+local ServerScriptService = game:GetService("ServerScriptService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Codes = require(ReplicatedStorage.Configs.Codes)
+local Remotes = ReplicatedStorage.Remotes
+local PlayerData = require(ServerScriptService.Modules.DataManager)
+
+local function RedeemCode(player:Player, testCode:string)
+	local code = Codes.GetValidCode(testCode) 
+	if not code then return "Invalid" end
+
+	local isExpired = Codes.IsCodeExpired(code) 
+	if isExpired then return "Expired" end
+
+	local profile = PlayerData.Profiles[player] 
+	if not profile then return "Error" end
+
+	local isRedeemed = profile.Data.Codes[code] 
+	if isRedeemed then return "Already Redeemed" end
+
+	local reward = Codes.Config[code].Reward
+
+	profile.Data.Codes[code] = true 
+	PlayerData.AdjustStarCoins(player, reward)
+	return "Success !"
+
+end
+
+
+Remotes.RedeemCode.OnServerInvoke = RedeemCode

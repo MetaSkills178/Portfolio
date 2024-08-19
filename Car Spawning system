@@ -1,0 +1,30 @@
+------------ SERVER SCRIPT SERVICE ----------------------
+
+local remote = game.ReplicatedStorage.spawnerRemote
+local car = workspace["D1GP Chassis Updated"]
+local carSpawner = workspace.CarSpawner
+
+remote.OnServerInvoke = function(player)
+	local newCar = car:Clone()
+	local char = player.Character
+	local head = char.Head
+	local var = CFrame.new(head.Position + Vector3.new(0,0,-15), head.Position)
+	newCar.Parent = workspace.spawnedCars
+	newCar.PrimaryPart = newCar.DriveSeat
+	newCar:SetPrimaryPartCFrame(var)
+	newCar.Name = tostring(player.Name) .. "'s car"
+
+	newCar.DriveSeat:GetPropertyChangedSignal("Occupant"):Connect(function()
+		if newCar.DriveSeat.Occupant == char.Humanoid then
+			local newInterface = newCar["A-Chassis Tune"]["A-Chassis Interface"]:Clone()
+			newInterface.Parent = player.PlayerGui
+
+		else
+			local newInterface = player.PlayerGui:WaitForChild("A-Chassis Interface")
+			newInterface:Destroy()
+		end
+	end)
+
+
+
+end

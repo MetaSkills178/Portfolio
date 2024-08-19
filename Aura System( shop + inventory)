@@ -1,0 +1,243 @@
+-------------- server script service ----------------------------
+
+local serverScriptService = game:GetService("ServerScriptService")
+local remotes = game.ReplicatedStorage.Remotes
+local toolsFolder = game.ReplicatedStorage:FindFirstChild("auras")
+local dataManager = require(serverScriptService:WaitForChild("Modules"):WaitForChild("DataManager"))
+local DataStoreService = game:GetService("DataStoreService")
+local CashStore = DataStoreService:GetDataStore("Cash")
+
+local bodyPartsR6 = {"Head", "Left Arm", "Left Leg", "Right Arm", "Right Leg", "Torso"}
+local bodyPartsR15 = {"Head",
+	"UpperTorso",
+	"LowerTorso",
+	"LeftFoot",
+	"LeftLowerLeg",
+	"LeftUpperLeg",
+	"RightFoot",
+	"RightLowerLeg",
+	"RightUpperLeg",
+	"LeftHand",
+	"LeftLowerArm",
+	"LeftUpperArm",
+	"RightHand",
+	"RightLowerArm",
+	"RightUpperArm",
+	"RootPart"
+}
+
+
+function copyEmitters(temp, char)
+	
+	if char:FindFirstChild("Humanoid").RigType == Enum.HumanoidRigType.R6 then
+		for _, partName in pairs(bodyPartsR6) do
+			local templatePart = temp:FindFirstChild(partName)
+			local charPart = char:FindFirstChild(partName)
+
+			if templatePart and charPart then
+				for _, emitter in pairs(templatePart:GetChildren()) do
+					if emitter:IsA("ParticleEmitter") then
+						local emitterClone = emitter:Clone()
+						emitterClone.Parent = charPart
+					end
+				end
+			end
+		end
+	end
+	
+	
+end
+
+function deleteEmitters(char)
+	if char:FindFirstChild("Humanoid").RigType == Enum.HumanoidRigType.R6 then
+		for _, partName in pairs(bodyPartsR6) do
+			local charPart = char:FindFirstChild(partName)
+
+			if charPart then
+				for _, child in pairs(charPart:GetChildren()) do
+					if child:IsA("ParticleEmitter") then
+						child:Destroy()
+					end
+				end
+			end
+		end
+	end
+
+
+end
+
+remotes.ToolBuy.OnServerInvoke = function(player, tempName)
+	local profile = dataManager.Profiles[player]
+	local character = player.Character or player.CharacterAdded:Wait()
+	
+	local tool = toolsFolder:FindFirstChild(tempName)
+
+	if tool == nil then return end
+
+	local price = tool.Price.Value
+
+	if player.Tools:FindFirstChild(tool.Name) and player.Tools.EquippedTool.Value == tool.Name  then
+		deleteEmitters(character)
+		
+		profile.Data.EquippedTool = "nil"
+		player.Tools.EquippedTool.Value = profile.Data.EquippedTool
+		print("Unequipped")
+		return "Unequipped"
+		
+	elseif player.Tools:FindFirstChild(tool.Name) and player.Tools.EquippedTool.Value ~= tool.Name then
+		deleteEmitters(character)
+		copyEmitters(tool, character)
+		
+		
+		
+		print("Equipped")
+		
+		profile.Data.EquippedTool = tool.Name
+		player.Tools.EquippedTool.Value = profile.Data.EquippedTool
+
+		return "Equipped"
+		
+	elseif not player.Tools:FindFirstChild(tool.Name) and player.Tools.EquippedTool.Value ~= tool.Name then	
+		if player.leaderstats.Cash.Value >= price then
+			player.leaderstats.Cash.Value -= price
+
+			local toolVal = Instance.new("StringValue")
+			toolVal.Name = tool.Name
+			toolVal.Parent = player.Tools
+
+			copyEmitters(tool, character)
+			
+			table.insert(profile.Data.Tools, tool.Name)
+
+			profile.Data.EquippedTool = tool.Name
+			player.Tools.EquippedTool.Value = profile.Data.EquippedTool
+			
+			
+			print("Bought")
+			return "Bought"
+		else
+			return "Failed"
+		end
+
+	end
+end
+
+
+
+------------- local script ---------------------------------------
+
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local Module3D = require(replicatedStorage:FindFirstChild("Module3D"))
+local toolsFolder = replicatedStorage:FindFirstChild("auras")
+local player = game.Players.LocalPlayer
+local remotes = game.ReplicatedStorage.Remotes
+
+local shop = script.Parent
+local main = shop.Frame:FindFirstChild("main")
+local display = shop.Frame:FindFirstChild("display")
+local scrollingFrame = main:FindFirstChild("ScrollingFrame")
+local closeBTN = shop.Frame:FindFirstChild("close")
+local openBTN = shop.ImageButton
+local template = script:FindFirstChild("template")
+
+------------------- display --------------------------
+
+local displayFRAME = display:FindFirstChild("inside")
+local nameLabel = displayFRAME:FindFirstChild("TextLabel")
+local priceLabel = displayFRAME:FindFirstChild("Price")
+local multiplierLabel = displayFRAME:FindFirstChild("Multiplier")
+local buyBTN = displayFRAME:FindFirstChild("TextButton")
+local viewport = displayFRAME:FindFirstChild("template"):FindFirstChild("ViewportFrame")
+
+
+local selectedTemplate = nil
+displayFRAME.Visible = false	
+
+
+local function selectTemplate(temp, color)
+	selectedTemplate = temp
+	displayFRAME.Visible = true
+	
+	nameLabel.Text = temp.Name
+	priceLabel.Text = "Price: " .. toolsFolder:FindFirstChild(temp.Name).Price.Value
+	multiplierLabel.Text = "Multiplier: x" .. toolsFolder:FindFirstChild(temp.Name).Multiplier.Value
+
+	if player.Tools.EquippedTool.Value == temp.Name then
+		buyBTN.Text = "UNEQUIP"
+	elseif player.Tools:FindFirstChild(temp.Name) and player.Tools.EquippedTool.Value ~= temp.Name then
+		buyBTN.Text = "EQUIP"
+	elseif not player.Tools:FindFirstChild(temp.Name) and player.Tools.EquippedTool.Value ~= temp.Name then
+		buyBTN.Text = "BUY"
+	end
+
+	for i, v in pairs(viewport:GetChildren()) do
+		if v:IsA("ViewportFrame")  then
+			v:Destroy()
+		end
+	end
+
+	viewport.Parent.BackgroundColor3 = color.Value
+	
+	local Model3D = Module3D:Attach3D(viewport,toolsFolder:FindFirstChild(temp.Name):Clone())
+	Model3D:SetDepthMultiplier(1.2)
+	Model3D.Camera.FieldOfView = 5
+	Model3D.Visible = true
+
+	game:GetService("RunService") .RenderStepped:Connect(function()
+		Model3D:SetCFrame(CFrame.Angles(0,tick() % (math.pi * 2), 0) * CFrame.Angles(math.rad(-10), 0, 0))
+	end)
+end
+
+
+local function buyCharacter()
+	local result = remotes.ToolBuy:InvokeServer(selectedTemplate.Name)
+
+	if result == "Bought" then
+		buyBTN.Text = "UNEQUIP"
+
+	elseif result == "Equipped" then
+		buyBTN.Text = "UNEQUIP"
+
+	elseif result == "Unequipped" then 
+		buyBTN.Text = "EQUIP"
+
+	end
+end
+
+
+for i, tool in pairs (toolsFolder:GetChildren()) do
+	local newTemplate = template:Clone()
+	newTemplate.Name = tool.Name
+	newTemplate.Parent = scrollingFrame
+	
+	local color = tool:WaitForChild("Color")
+	
+	newTemplate.BackgroundColor3 = color.Value
+	
+	local model = Module3D:Attach3D(newTemplate.ViewportFrame, tool:Clone())
+	model:SetDepthMultiplier(1.2)
+	model.Camera.FieldOfView = 5
+	model.Visible = true
+
+	game:GetService("RunService").RenderStepped:Connect(function()
+		model:SetCFrame(CFrame.Angles(0,tick() % (math.pi * 2), 0) * CFrame.Angles(math.rad(-10), 0, 0))
+	end)
+	
+	newTemplate.ViewportFrame.button.MouseButton1Click:Connect(function()
+		selectTemplate(newTemplate, color)
+	end)
+	
+end
+
+
+buyBTN.MouseButton1Click:Connect(buyCharacter)
+
+
+closeBTN.MouseButton1Click:Connect(function(player)
+	shop.Frame.Visible = false
+end)
+
+openBTN.MouseButton1Click:Connect(function(player)
+	shop.Frame.Visible = not shop.Frame.Visible
+end)
+

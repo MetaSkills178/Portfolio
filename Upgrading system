@@ -2,7 +2,7 @@
 
 local player = game.Players.LocalPlayer
 local numberFormatter = require(game.ReplicatedStorage.numberFormatter)
-local remote = game.ReplicatedStorage.Remotes.RemoteFunction
+local remote = game.ReplicatedStorage.Remotes.UpgradeStorage
 
 local UIlevel = player.PlayerGui.Upgrade.Frame.ScrollingFrame.storage.Frame.Frame
 local displayUpgrades = {UIlevel.lvl1, UIlevel.lvl2, UIlevel.lvl3, UIlevel.lvl4, UIlevel.lvl5}
@@ -13,32 +13,14 @@ local Upgrade = player:WaitForChild("Upgrade")
 local storageUpgrade = Upgrade:WaitForChild("upgradeStorage")
 local gems = player.leaderstats:WaitForChild("gems")
 
+local price = {1000, 2500, 5000, 10000, "MAX"}
+
 function changeColor()
-	if storageUpgrade.Value == 1 then
-		displayUpgrades[1].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		necessaryGems.Text = numberFormatter.Format(1000)
-	elseif storageUpgrade.Value == 2 then
-		displayUpgrades[1].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		displayUpgrades[2].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		necessaryGems.Text = numberFormatter.Format(2500)
-	elseif storageUpgrade.Value == 3 then
-		displayUpgrades[1].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		displayUpgrades[2].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		displayUpgrades[3].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		necessaryGems.Text = numberFormatter.Format(5000)
-	elseif storageUpgrade.Value == 4 then
-		displayUpgrades[1].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		displayUpgrades[2].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		displayUpgrades[3].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		displayUpgrades[4].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		necessaryGems.Text = numberFormatter.Format(10000)
-	elseif storageUpgrade.Value == 5 then
-		displayUpgrades[1].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		displayUpgrades[2].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		displayUpgrades[3].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		displayUpgrades[4].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		displayUpgrades[5].ImageColor3 =  Color3.fromRGB(30, 255, 50)
-		necessaryGems.Text = "MAX"
+	for i, upgrade in ipairs(displayUpgrades)  do
+		if storageUpgrade.Value == i then
+			upgrade.ImageColor3 =  Color3.fromRGB(30, 255, 50)
+			necessaryGems.Text = numberFormatter.Format(price[i]) or "MAX"
+		end
 	end
 end
 
@@ -58,7 +40,7 @@ end)
 
 local serverScriptService = game:GetService("ServerScriptService")
 local dataManager = require(serverScriptService:WaitForChild("Modules"):WaitForChild("DataManager"))
-local remote = game.ReplicatedStorage.Remotes.RemoteFunction
+local remote = game.ReplicatedStorage.Remotes.UpgradeStorage
 
 
 remote.OnServerInvoke = function(player)
@@ -68,56 +50,20 @@ remote.OnServerInvoke = function(player)
 	local gems = player.leaderstats:WaitForChild("gems")
 	local maxStorage = player.Storage:WaitForChild("maxStorage")
 	
+	local requiredGems = {500, 1000, 2500, 5000, 10000}
+	local reward = {10, 20, 30, 50, 75}
 	
-	if storageUpgrade.Value == 0 and gems.Value >= 500 then
-		profile.Data.gems = profile.Data.gems-500
-		gems.Value = profile.Data.gems
-		profile.Data.upgradeStorage = 1
-		storageUpgrade.Value = profile.Data.upgradeStorage
-		profile.Data.maxStorage += 10
-		maxStorage.Value = profile.Data.maxStorage
-		os.exit()
-	end
 	
-	if storageUpgrade.Value == 1 and gems.Value >= 1000 then
-		profile.Data.gems = profile.Data.gems-1000
-		gems.Value = profile.Data.gems
-		profile.Data.upgradeStorage = 2
-		storageUpgrade.Value = profile.Data.upgradeStorage
-		profile.Data.maxStorage += 20
-		maxStorage.Value = profile.Data.maxStorage
-		
-		os.exit()
-	end
-	
-	if storageUpgrade.Value == 2 and gems.Value >= 2500 then
-		profile.Data.gems = profile.Data.gems-2500
-		gems.Value = profile.Data.gems
-		profile.Data.upgradeStorage = 3
-		storageUpgrade.Value = profile.Data.upgradeStorage
-		profile.Data.maxStorage += 30
-		maxStorage.Value = profile.Data.maxStorage
-		os.exit()
-	end
-	
-	if storageUpgrade.Value == 3 and gems.Value >= 5000 then
-		profile.Data.gems = profile.Data.gems-5000
-		gems.Value = profile.Data.gems
-		profile.Data.upgradeStorage = 4
-		storageUpgrade.Value = profile.Data.upgradeStorage
-		profile.Data.maxStorage += 50
-		maxStorage.Value = profile.Data.maxStorage
-		os.exit()
-	end
-	
-	if storageUpgrade.Value == 4 and gems.Value >= 10000 then
-		profile.Data.gems = profile.Data.gems-10000
-		gems.Value = profile.Data.gems
-		profile.Data.upgradeStorage = 5
-		storageUpgrade.Value = profile.Data.upgradeStorage
-		profile.Data.maxStorage += 75
-		maxStorage.Value = profile.Data.maxStorage
-		os.exit()
+	for i, u in pairs(requiredGems)  do
+		if storageUpgrade.Value == i-1 and gems.Value >= u then
+			profile.Data.gems = profile.Data.gems - u
+			gems.Value = profile.Data.gems
+			profile.Data.upgradeStorage = i
+			storageUpgrade.Value = profile.Data.upgradeStorage
+			profile.Data.maxStorage += reward[i]
+			maxStorage.Value = profile.Data.maxStorage
+			return
+		end
 	end
 	
 end

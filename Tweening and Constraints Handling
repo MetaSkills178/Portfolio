@@ -1,0 +1,60 @@
+local ts = game:GetService("TweenService")
+
+local chest = workspace:FindFirstChild("Chest")
+local chestProx = chest:FindFirstChild("ProximityPrompt")
+local chestOpened = chest:FindFirstChild("Opened")
+local chestRoot = chest:FindFirstChild("Root")
+local chestTweenInfo = TweenInfo.new(1, Enum.EasingStyle.Bounce)
+local chestGoal = {Orientation = Vector3.new(0, 0, 120)}
+local chestTween = ts:Create(chestRoot, chestTweenInfo, chestGoal)
+
+local door = workspace:FindFirstChild("Door")
+local doorProx = door:FindFirstChild("ProximityPrompt")
+local doorRoot = door:FindFirstChild("Root")
+local doorOpened = door:FindFirstChild("Opened")
+local doorHandle = door:FindFirstChild("handle")
+local doorClue = game.ReplicatedStorage.Tools.Key
+local doorTweenInfos = {
+	TweenInfo.new(2, Enum.EasingStyle.Bounce),
+	TweenInfo.new(1.5, Enum.EasingStyle.Exponential)
+}
+local doorGoals = {
+	["one"] = {Orientation = Vector3.new(0, -120, 0)},
+	["two"] = {Orientation = Vector3.new(0, 0, 0)}
+}
+local doorTweens = {
+	ts:Create(doorRoot, doorTweenInfos[1], doorGoals["one"]),
+	ts:Create(doorRoot, doorTweenInfos[2], doorGoals["two"])
+}
+
+
+chestProx.Triggered:Connect(function(player)
+	if not chestOpened.Value then
+		chestTween:Play()
+		chestOpened.Value = true
+		local newClue = doorClue:Clone()
+		newClue.Parent = player.Backpack
+	end
+end)
+
+
+doorProx.Triggered:Connect(function(player)
+
+	local character = workspace:WaitForChild(player.Name)
+
+	if character:FindFirstChild("Key") and character:FindFirstChild("Key"):IsA("Tool") then
+		if not doorOpened.Value then
+			doorTweens[1]:Play()
+			print("opening")
+		else
+			doorTweens[2]:Play()
+			print("closing")
+		end
+		doorOpened.Value = not doorOpened.Value
+		return
+	else
+		print("Clue isn't equipped !")
+		return
+	end
+
+end)
